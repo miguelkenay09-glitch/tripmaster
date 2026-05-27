@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: tripmaster-postgres
+    environment:
+      POSTGRES_USER: tripmaster
+      POSTGRES_PASSWORD: tripmaster_dev_2024
+      POSTGRES_DB: tripmaster_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schemas:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tripmaster"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tripmaster-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: tripmaster-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tripmaster-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tripmaster-backend
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://tripmaster:tripmaster_dev_2024@postgres:5432/tripmaster_db
+      REDIS_URL: redis://redis:6379
+      MAPBOX_TOKEN: ${MAPBOX_TOKEN}
+      GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+      TRIPADVISOR_API_KEY: ${TRIPADVISOR_API_KEY}
+      UNSPLASH_API_KEY: ${UNSPLASH_API_KEY}
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
+      JWT_SECRET: your_jwt_secret_here_change_in_production
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/node_modules:/app/node_modules
+    networks:
+      - tripmaster-network
+    command: npm run dev
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: tripmaster-frontend
+    environment:
+      VITE_API_URL: http://localhost:3000
+      VITE_MAPBOX_TOKEN: ${MAPBOX_TOKEN}
+      VITE_GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/node_modules:/app/node_modules
+    networks:
+      - tripmaster-network
+    command: npm run dev
+
+  # Python AI Engine
+  ai-engine:
+    build:
+      context: ./ai-engine
+      dockerfile: Dockerfile
+    container_name: tripmaster-ai-engine
+    environment:
+      PYTHONUNBUFFERED: 1
+      DATABASE_URL: postgresql://tripmaster:tripmaster_dev_2024@postgres:5432/tripmaster_db
+      REDIS_URL: redis://redis:6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./ai-engine/src:/app/src
+      - ./ai-engine/models:/app/models
+    networks:
+      - tripmaster-network
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Nginx Reverse Proxy (Opcional)
+  nginx:
+    image: nginx:alpine
+    container_name: tripmaster-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - tripmaster-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  tripmaster-network:
+    driver: bridge

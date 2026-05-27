@@ -1,0 +1,62 @@
+{
+  "name": "tripmaster-backend",
+  "version": "1.0.0",
+  "description": "Backend API for TripMaster - Advanced European Travel SaaS",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "db:migrate": "node --loader tsx ./src/db/migrations.ts",
+    "db:seed": "node --loader tsx ./src/db/seeds.ts",
+    "test": "vitest",
+    "test:cov": "vitest --coverage"
+  },
+  "keywords": [
+    "travel",
+    "tourism",
+    "europe",
+    "saas",
+    "map",
+    "ai"
+  ],
+  "author": "Miguel Kenay",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-cors": "^0.1.1",
+    "dotenv": "^16.3.1",
+    "axios": "^1.6.0",
+    "pg": "^8.11.0",
+    "redis": "^4.6.0",
+    "jsonwebtoken": "^9.1.0",
+    "bcrypt": "^5.1.1",
+    "zod": "^3.22.0",
+    "uuid": "^9.0.0",
+    "stripe": "^13.0.0",
+    "nodemailer": "^6.9.0",
+    "multer": "^1.4.5-lts.1",
+    "@aws-sdk/client-s3": "^3.400.0",
+    "mapbox": "^1.13.0",
+    "winston": "^3.11.0",
+    "sentry": "^7.84.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/express": "^4.17.17",
+    "@types/bcrypt": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.2",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.44.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.1.0",
+    "tsx": "^3.14.0",
+    "vitest": "^0.34.0",
+    "@vitest/ui": "^0.34.0"
+  }
+}
